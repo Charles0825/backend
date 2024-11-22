@@ -52,7 +52,7 @@ const querySensorDataHourlyMonthly = async () => {
 
   try {
     const res = await client.query(query);
-    // console.log(res.rows);
+    console.log(res.rows);
 
     return res.rows; // Return the rows with device_name, month, and highest energy values
   } catch (error) {
@@ -75,7 +75,7 @@ const querySensorDataHourlyDaily = async () => {
 
   try {
     const res = await client.query(query);
-    // console.log(res.rows);
+    console.log(res.rows);
 
     return res.rows; // Return the rows with device_name, day, and highest energy values
   } catch (error) {

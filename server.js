@@ -6,6 +6,11 @@ const rateLimit = require("express-rate-limit");
 const isBetween = require("dayjs/plugin/isBetween");
 const cron = require("node-cron");
 require("dotenv").config();
+const utc = require("dayjs/plugin/utc");
+const timezone = require("dayjs/plugin/timezone");
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const {
   querySensorData,
@@ -269,21 +274,128 @@ function aggregateData(data, period) {
 //   }
 // });
 
+// app.get("/api/energy-usage-summary", limiter, async (req, res) => {
+//   try {
+//     console.log("Requesting energy usage summary...");
+
+//     // Fetch the hourly, daily, and monthly data using your new functions
+//     const monthlyData = await querySensorDataHourlyMonthly(); // Monthly energy usage data
+//     const dailyData = await querySensorDataHourlyDaily(); // Daily energy usage data
+//     const todayData = await queryMaxEnergyToday(); // Today's max energy data
+
+//     const today = dayjs();
+//     const startOfToday = today.startOf("day");
+//     const startOfYesterday = today.subtract(1, "day").startOf("day");
+//     const startOfThisMonth = today.startOf("month");
+//     const startOf31DaysAgo = today.subtract(30, "days").startOf("day");
+//     const endOfToday = today.endOf("day");
+
+//     // Initialize variables for consumption summaries
+//     let todaysConsumption = 0;
+//     let yesterdaysConsumption = 0;
+//     let thisMonthsConsumption = 0;
+//     const runningDevices = new Set();
+//     const dailyUsage = new Array(31).fill(0); // For daily usage over the last 31 days
+//     const monthlyUsage = new Array(12).fill(0); // For monthly usage
+//     const dailyEnergyUsage = {}; // For daily usage per device
+
+//     // Process monthly data for energy usage
+//     monthlyData.forEach((item) => {
+//       const itemMonth = dayjs(item.month);
+//       const deviceName = item.device_name;
+//       const energy = parseFloat(item.highest_energy); // Assuming the energy is the "highest_energy" for the month
+
+//       if (itemMonth.isAfter(startOfThisMonth)) {
+//         thisMonthsConsumption += energy;
+//       }
+
+//       if (deviceName) {
+//         runningDevices.add(deviceName);
+//       }
+
+//       const monthIndex = itemMonth.month(); // 0-based index for month
+//       monthlyUsage[monthIndex] += energy;
+//     });
+
+//     // Process daily data for energy usage
+//     dailyData.forEach((item) => {
+//       const itemDay = dayjs(item.day);
+//       const deviceName = item.device_name;
+//       const energy = parseFloat(item.highest_energy); // Assuming the energy is the "highest_energy" for the day
+
+//       if (itemDay.isAfter(startOfToday)) {
+//         todaysConsumption += energy;
+//       }
+
+//       if (itemDay.isAfter(startOfYesterday) && itemDay.isBefore(startOfToday)) {
+//         yesterdaysConsumption += energy;
+//       }
+
+//       if (deviceName) {
+//         runningDevices.add(deviceName);
+//       }
+
+//       // Daily energy usage for the last 31 days
+//       if (itemDay.isBetween(startOf31DaysAgo, endOfToday, null, "[]")) {
+//         const dayIndex = itemDay.diff(startOf31DaysAgo, "days");
+//         dailyUsage[dayIndex] += energy;
+
+//         if (!dailyEnergyUsage[deviceName]) {
+//           dailyEnergyUsage[deviceName] = new Array(31).fill(0);
+//         }
+//         dailyEnergyUsage[deviceName][dayIndex] += energy;
+//       }
+//     });
+
+//     // Process today's energy data (max energy)
+//     todayData.forEach((item) => {
+//       const deviceName = item.device_name;
+//       const energy = parseFloat(item.max_energy); // Assuming the energy is the "max_energy" for today
+
+//       todaysConsumption += energy;
+
+//       if (deviceName) {
+//         runningDevices.add(deviceName);
+//       }
+//     });
+
+//     // Prepare the summary object with all the data
+//     const summary = {
+//       consumptionSummary: {
+//         todaysConsumption: todaysConsumption.toFixed(2) + " kWh",
+//         yesterdaysConsumption: yesterdaysConsumption.toFixed(2) + " kWh",
+//         thisMonthsConsumption: thisMonthsConsumption.toFixed(2) + " kWh",
+//         runningDevicesCount: runningDevices.size,
+//       },
+//       dailyEnergyUsage: dailyUsage,
+//       monthlyEnergyUsage: monthlyUsage,
+//       dailyEnergyUsagePerRoom: dailyEnergyUsage,
+//     };
+
+//     res.json(summary);
+//   } catch (error) {
+//     console.error("Error retrieving energy usage summary:", error);
+//     res.status(500).json({ error: "Failed to retrieve energy usage summary." });
+//   }
+// });
+
 app.get("/api/energy-usage-summary", limiter, async (req, res) => {
   try {
     console.log("Requesting energy usage summary...");
 
-    // Fetch the hourly, daily, and monthly data using your new functions
-    const monthlyData = await querySensorDataHourlyMonthly(); // Monthly energy usage data
-    const dailyData = await querySensorDataHourlyDaily(); // Daily energy usage data
-    const todayData = await queryMaxEnergyToday(); // Today's max energy data
-
-    const today = dayjs();
+    // Set today in Philippine Time
+    const today = dayjs().tz("Asia/Manila");
     const startOfToday = today.startOf("day");
     const startOfYesterday = today.subtract(1, "day").startOf("day");
     const startOfThisMonth = today.startOf("month");
     const startOf31DaysAgo = today.subtract(30, "days").startOf("day");
     const endOfToday = today.endOf("day");
+
+    // Rest of your code...
+    // Fetch the hourly, daily, and monthly data using your new functions
+    const monthlyData = await querySensorDataHourlyMonthly(); // Monthly energy usage data
+    const dailyData = await querySensorDataHourlyDaily(); // Daily energy usage data
+    const todayData = await queryMaxEnergyToday(); // Today's max energy data
 
     // Initialize variables for consumption summaries
     let todaysConsumption = 0;
@@ -296,7 +408,7 @@ app.get("/api/energy-usage-summary", limiter, async (req, res) => {
 
     // Process monthly data for energy usage
     monthlyData.forEach((item) => {
-      const itemMonth = dayjs(item.month);
+      const itemMonth = dayjs(item.month).tz("Asia/Manila");
       const deviceName = item.device_name;
       const energy = parseFloat(item.highest_energy); // Assuming the energy is the "highest_energy" for the month
 
@@ -314,7 +426,7 @@ app.get("/api/energy-usage-summary", limiter, async (req, res) => {
 
     // Process daily data for energy usage
     dailyData.forEach((item) => {
-      const itemDay = dayjs(item.day);
+      const itemDay = dayjs(item.day).tz("Asia/Manila");
       const deviceName = item.device_name;
       const energy = parseFloat(item.highest_energy); // Assuming the energy is the "highest_energy" for the day
 

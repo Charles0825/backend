@@ -1,0 +1,174 @@
+const Influx = require("influx");
+const crypto = require("crypto");
+const redisClient = require("./redisClient.js");
+
+const influx = new Influx.InfluxDB({
+  host: "raspi",
+  database: "sensor_data",
+  port: 8086,
+  username: "admin2",
+  password: "admin2",
+});
+
+// Check if the database exists before performing any operation
+const checkDatabase = async () => {
+  try {
+    const names = await influx.getDatabaseNames();
+    if (!names.includes("sensor_data")) {
+      // throw new Error("Database 'sensor_data' does not exist.");
+      console.log("Database 'sensor_data' does not exist.");
+    }
+  } catch (error) {
+    // throw new Error(`Error checking database: ${error.message}`);
+    console.log(`Error checking database: ${error.message}`);
+  }
+};
+
+// Function to query all sensor data
+const querySensorData = async () => {
+  await checkDatabase(); // Ensure the database exists
+  const query = "SELECT * FROM sensordata";
+  try {
+    const results = await influx.query(query);
+    // Keep the original ISO 8601 format
+    return results; // Return the data as is
+  } catch (error) {
+    console.error(`Error querying InfluxDB: ${error.message}`);
+    throw new Error(`Error querying InfluxDB: ${error.message}`);
+  }
+};
+
+// const querySensorData = async () => {
+//   await checkDatabase(); // Ensure the database exists
+//   const cacheKey = "sensor_data"; // Redis key for caching sensor data
+
+//   try {
+//     let cachedData;
+//     // Step 1: Check if data is cached in Redis
+//     if (redisClient.isReady) {
+//       cachedData = await redisClient.get(cacheKey);
+//     }
+
+//     if (cachedData) {
+//       console.log("Returning data from Redis cache.");
+//       return JSON.parse(cachedData); // Return cached data
+//     }
+
+//     // Step 2: If not cached, query data from InfluxDB
+//     const query = "SELECT * FROM sensordata";
+
+//     const results = await influx.query(query);
+
+//     // Step 3: Cache the data in Redis with an expiration time (e.g., 60 seconds)
+//     if (redisClient.isReady) {
+//       await redisClient.setEx(cacheKey, 60, JSON.stringify(results));
+//     }
+
+//     console.log("Returning data from InfluxDB and caching it in Redis.");
+//     return results; // Return the fresh data from InfluxDB
+//   } catch (error) {
+//     // Improved error handling for Redis and InfluxDB
+//     if (error.message.includes("Redis")) {
+//       console.error("Redis error:", error.message);
+//       throw new Error("Error accessing Redis: " + error.message);
+//     } else if (error.message.includes("InfluxDB")) {
+//       console.error("InfluxDB error:", error.message);
+//       throw new Error("Error querying InfluxDB: " + error.message);
+//     } else {
+//       console.error("Unexpected error:", error.message);
+//       throw new Error("An unexpected error occurred: " + error.message);
+//     }
+//   }
+// };
+
+// Function to delete sensor data based on id and device name
+const deleteSensorData = async (id, deviceName) => {
+  try {
+    // Validate that id and deviceName are present
+    if (!id || !deviceName) {
+      throw new Error("Missing id or deviceName for deletion.");
+    }
+
+    // Assuming "0_id" and "1_device_name" are tags, not fields
+    const query = `DROP SERIES FROM "sensordata" WHERE "0_id" = '${id}' AND "1_device_name" = '${deviceName}'`;
+    await influx.query(query);
+  } catch (error) {
+    console.error(`Error dropping series from InfluxDB: ${error.message}`);
+    throw new Error(`Error dropping series from InfluxDB: ${error.message}`);
+  }
+};
+
+// Function to fetch a user from InfluxDB by username
+async function getUserFromDB(username) {
+  try {
+    const result = await influx.query(
+      `SELECT * FROM "user" WHERE "username" = '${username}'`
+    );
+    if (result.length === 0) return null;
+
+    const user = result[0];
+    return {
+      id: user.id,
+      username: user.username,
+      passwordHash: user.password,
+    };
+  } catch (error) {
+    console.error(`Error fetching user from InfluxDB: ${error.message}`);
+    throw new Error(`Error fetching user: ${error.message}`);
+  }
+}
+
+function hashPassword(password) {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
+
+// Function to change username or password
+async function changeUserDetail(username, newUsername, newPasswordHash) {
+  try {
+    const user = await getUserFromDB(username);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Step 1: Drop the existing user data
+    await influx.query(`DROP SERIES FROM "user" WHERE "id" = '${user.id}'`);
+
+    // Step 2: Prepare the fields for writing
+    const fieldsToUpdate = {
+      username: user.username, // Retain the current username for reference
+      password: user.passwordHash, // Retain the current password for reference
+    };
+
+    // Update fields based on provided parameters
+    if (newUsername) {
+      fieldsToUpdate.username = newUsername; // Set new username if provided
+    }
+
+    if (newPasswordHash) {
+      fieldsToUpdate.password = hashPassword(newPasswordHash); // Update to new password if provided
+    }
+
+    // Step 3: Write the new data point with the updated fields
+    await influx.writePoints([
+      {
+        measurement: "user",
+        tags: { id: user.id.toString() }, // Use the existing user's ID
+        fields: fieldsToUpdate,
+      },
+    ]);
+
+    const updateType = newUsername ? "Username" : "Password"; // Determine what was updated
+    return { message: `${updateType} updated successfully` };
+  } catch (error) {
+    console.error(`Error changing user detail: ${error.message}`);
+    throw new Error(`Error changing user detail: ${error.message}`);
+  }
+}
+
+// Export functions
+module.exports = {
+  querySensorData,
+  deleteSensorData,
+  getUserFromDB,
+  changeUserDetail,
+};

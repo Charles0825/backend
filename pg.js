@@ -1,14 +1,10 @@
 const { Client } = require("pg");
 const crypto = require("crypto");
-const onPc = false;
-const ip = "172.17.0.1";
-
-if (onPc) {
-  ip = "raspi";
-}
+require("dotenv").config();
 
 const client = new Client({
-  host: ip, // your Raspberry Pi's hostname or IP address
+  host: process.env.PG_DATABASE_HOST_RASPI,
+  // host: process.env.PG_DATABASE_HOST,
   port: 5432, // default PostgreSQL port
   user: "admin", // your PostgreSQL username
   password: "admin", // your PostgreSQL password

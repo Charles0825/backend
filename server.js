@@ -5,6 +5,7 @@ const _ = require("lodash");
 const rateLimit = require("express-rate-limit");
 const isBetween = require("dayjs/plugin/isBetween");
 const cron = require("node-cron");
+require("dotenv").config();
 
 const {
   querySensorData,
@@ -20,7 +21,7 @@ const {
 
 const { calculateAndSaveAllAverages } = require("./dataController.js");
 const app = express();
-const port = 5555;
+const port = process.env.SERVER_PORT || 4444;
 
 // Create a rate limiter: maximum of 10 requests per minute
 const limiter = rateLimit({

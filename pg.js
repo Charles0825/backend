@@ -14,7 +14,7 @@ client.connect();
 
 // Function to query device names from sensor_data
 const getDeviceNames = async () => {
-  const query = "SELECT DISTINCT device_name FROM sensor_data;"; // Adjust the column name as per your schema
+  const query = "SELECT DISTINCT device_name FROM hourly_averages;"; // Adjust the column name as per your schema
 
   try {
     const res = await client.query(query);

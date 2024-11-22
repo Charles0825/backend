@@ -1,15 +1,19 @@
 const { Client } = require("pg");
 const crypto = require("crypto");
+const onPc = false;
+const ip = "172.17.0.1";
 
-// Connect to TimescaleDB (PostgreSQL)
+if (onPc) {
+  ip = "raspi";
+}
+
 const client = new Client({
-  host: "raspi", // your Raspberry Pi's hostname or IP address
+  host: ip, // your Raspberry Pi's hostname or IP address
   port: 5432, // default PostgreSQL port
   user: "admin", // your PostgreSQL username
   password: "admin", // your PostgreSQL password
   database: "sensor_data", // your database name
 });
-
 // Connect to the database
 client.connect();
 

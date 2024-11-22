@@ -14,3 +14,14 @@ services:
       NODE_ENV: production
     command: ["node", "server.js"]
     hostname: backend
+    networks:
+      app_network:
+        ipv4_address: 172.17.0.11 # Assign the container an IP address in the same subnet
+
+networks:
+  app_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.17.0.0/16 # Define the subnet for your network
+          gateway: 172.17.0.1 # Set the gateway to 172.17.0.1

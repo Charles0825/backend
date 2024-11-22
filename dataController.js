@@ -1,5 +1,6 @@
 const { Client } = require("pg");
 const _ = require("lodash");
+require("dotenv").config();
 
 async function calculateAndSaveAverages(timeInterval, client) {
   try {
@@ -128,7 +129,7 @@ async function checkAndSaveCurrentDate(client) {
 
 async function calculateAndSaveAllAverages() {
   const client = new Client({
-    host: "raspi",
+    host: process.env.PG_DATABASE_HOST,
     port: 5432,
     user: "admin",
     password: "admin",

@@ -3,8 +3,7 @@ const crypto = require("crypto");
 require("dotenv").config();
 
 const client = new Client({
-  host: process.env.PG_DATABASE_HOST_RASPI,
-  // host: process.env.PG_DATABASE_HOST,
+  host: process.env.PG_DATABASE_HOST,
   port: 5432, // default PostgreSQL port
   user: "admin", // your PostgreSQL username
   password: "admin", // your PostgreSQL password

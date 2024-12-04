@@ -1,3 +1,4 @@
+const mqtt = require("mqtt");
 const { Client } = require("pg");
 const _ = require("lodash");
 require("dotenv").config();
@@ -136,6 +137,8 @@ async function calculateAndSaveAllAverages() {
     database: "sensor_data",
   });
 
+  const mqttClient = mqtt.connect("mqtt://raspi:1883");
+
   try {
     await client.connect(); // Connect once
 
@@ -143,6 +146,9 @@ async function calculateAndSaveAllAverages() {
     const shouldProceed = await checkAndSaveCurrentDate(client);
 
     if (shouldProceed) {
+      mqttClient.publish("pzem/energy/reset", "RESET", { retain: false });
+      console.log("Published RESET to topic pzem/energy/reset.");
+
       await calculateAndSaveAverages("hour", client);
 
       await deleteOldData(client);
@@ -152,6 +158,7 @@ async function calculateAndSaveAllAverages() {
   } catch (err) {
     console.error("Error during the average calculation process:", err.stack);
   } finally {
+    mqttClient.end();
     await client.end();
   }
 }

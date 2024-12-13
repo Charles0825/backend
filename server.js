@@ -454,24 +454,28 @@ app.get("/api/energy-usage-summary", limiter, async (req, res) => {
       }
     });
 
-    // Process today's energy data (max energy)
-    todayData.forEach((item) => {
-      const deviceName = item.device_name;
-      const energy = parseFloat(item.max_energy); // Assuming the energy is the "max_energy" for today
+    // // Process today's energy data (max energy)
+    // todayData.forEach((item) => {
+    //   const deviceName = item.device_name;
+    //   const energy = parseFloat(item.max_energy); // Assuming the energy is the "max_energy" for today
+    //   console.log(energy);
+    //   todaysConsumption += energy;
+    //   console.log(todaysConsumption);
+    //   if (deviceName) {
+    //     runningDevices.add(deviceName);
+    //   }
+    // });
 
-      todaysConsumption += energy;
+    const formatEnergy = (value) =>
+      value >= 1000
+        ? (value / 1000).toFixed(2) + " kWh"
+        : value.toFixed(2) + " Wh";
 
-      if (deviceName) {
-        runningDevices.add(deviceName);
-      }
-    });
-
-    // Prepare the summary object with all the data
     const summary = {
       consumptionSummary: {
-        todaysConsumption: todaysConsumption.toFixed(2) + " kWh",
-        yesterdaysConsumption: yesterdaysConsumption.toFixed(2) + " kWh",
-        thisMonthsConsumption: thisMonthsConsumption.toFixed(2) + " kWh",
+        todaysConsumption: formatEnergy(todaysConsumption),
+        yesterdaysConsumption: formatEnergy(yesterdaysConsumption),
+        thisMonthsConsumption: formatEnergy(thisMonthsConsumption),
         runningDevicesCount: runningDevices.size,
       },
       dailyEnergyUsage: dailyUsage,

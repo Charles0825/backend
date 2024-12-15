@@ -52,7 +52,7 @@ const querySensorDataHourlyMonthly = async () => {
 
   try {
     const res = await client.query(query);
-    // console.log(res.rows);
+    console.log(res.rows);
 
     return res.rows; // Return the rows with device_name, month, and highest energy values
   } catch (error) {
@@ -75,7 +75,7 @@ const querySensorDataHourlyDaily = async () => {
 
   try {
     const res = await client.query(query);
-    // console.log(res.rows);
+    console.log(res.rows);
 
     return res.rows; // Return the rows with device_name, day, and highest energy values
   } catch (error) {
@@ -91,7 +91,7 @@ const queryMaxEnergyToday = async () => {
   const query = `
     SELECT device_name, DATE_TRUNC('day', timestamp) AS day, MAX(energy) AS max_energy
     FROM sensor_data
-    WHERE DATE_TRUNC('day', timestamp) = CURRENT_DATE  -- Only get data for today
+    WHERE DATE_TRUNC('day', timestamp) = CURRENT_DATE
     GROUP BY device_name, day
     ORDER BY device_name;
   `; // Query to get the max energy per device for today

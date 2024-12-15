@@ -93,9 +93,7 @@ app.get("/api/sensors", limiter, async (req, res) => {
 
     // Format the data with custom timestamp
     let formattedData = rawData.map((item) => ({
-      timestamp: dayjs(item.timestamp)
-        .tz("Asia/Manila")
-        .format("MM/DD/YYYY, hh:mm:ss A"),
+      timestamp: dayjs(item.timestamp).format("MM/DD/YYYY, hh:mm:ss A"),
       id: item["id"],
       deviceName: item["device_name"],
       voltage: parseFloat(item["avg_voltage"]) || 0,

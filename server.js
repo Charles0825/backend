@@ -452,17 +452,17 @@ app.get("/api/energy-usage-summary", limiter, async (req, res) => {
       }
     });
 
-    // // Process today's energy data (max energy)
-    // todayData.forEach((item) => {
-    //   const deviceName = item.device_name;
-    //   const energy = parseFloat(item.max_energy); // Assuming the energy is the "max_energy" for today
-    //   console.log(energy);
-    //   todaysConsumption += energy;
-    //   console.log(todaysConsumption);
-    //   if (deviceName) {
-    //     runningDevices.add(deviceName);
-    //   }
-    // });
+    // Process today's energy data (max energy)
+    todayData.forEach((item) => {
+      const deviceName = item.device_name;
+      const energy = parseFloat(item.max_energy);
+      console.log(energy);
+      todaysConsumption += energy;
+      console.log(todaysConsumption);
+      if (deviceName) {
+        runningDevices.add(deviceName);
+      }
+    });
 
     const formatEnergy = (value) =>
       value >= 1000

@@ -98,7 +98,7 @@ const queryMaxEnergyToday = async () => {
 
   try {
     const res = await client.query(query);
-    console.log(res.rows);
+    // console.log(res.rows);
 
     return res.rows; // Return rows with device_name, today, and max energy values
   } catch (error) {

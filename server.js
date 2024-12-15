@@ -93,15 +93,17 @@ app.get("/api/sensors", limiter, async (req, res) => {
 
     // Format the data with custom timestamp
     let formattedData = rawData.map((item) => ({
-      timestamp: dayjs(item.timestamp).format("MM/DD/YYYY, hh:mm:ss A"),
+      timestamp: dayjs(item.timestamp)
+        .tz("Asia/Manila")
+        .format("MM/DD/YYYY, hh:mm:ss A"),
       id: item["id"],
       deviceName: item["device_name"],
-      voltage: parseFloat(item["avg_voltage"]) || 0, // Convert to float, default to 0 if invalid
-      current: parseFloat(item["avg_current"]) || 0, // Convert to float, default to 0 if invalid
-      activePower: parseFloat(item["avg_active_power"]) || 0, // Convert to float, default to 0 if invalid
-      energy: parseFloat(item["max_energy"]) || 0, // Convert to float, default to 0 if invalid
-      frequency: parseFloat(item["avg_frequency"]) || 0, // Convert to float, default to 0 if invalid
-      powerFactor: parseFloat(item["avg_power_factor"]) || 0, // Convert to float, default to 0 if invalid
+      voltage: parseFloat(item["avg_voltage"]) || 0,
+      current: parseFloat(item["avg_current"]) || 0,
+      activePower: parseFloat(item["avg_active_power"]) || 0,
+      energy: parseFloat(item["max_energy"]) || 0,
+      frequency: parseFloat(item["avg_frequency"]) || 0,
+      powerFactor: parseFloat(item["avg_power_factor"]) || 0,
     }));
 
     // Filter by deviceName if specified

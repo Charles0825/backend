@@ -116,7 +116,7 @@ const querySensorDataHourly = async () => {
 
   try {
     const res = await client.query(query);
-    // console.log(res.rows);
+    //console.log(res.rows);
 
     return res.rows; // Return the data as is
   } catch (error) {
@@ -124,7 +124,7 @@ const querySensorDataHourly = async () => {
     throw new Error(`Error querying TimescaleDB: ${error.message}`);
   }
 };
-
+querySensorDataHourly();
 // Function to delete sensor data based on id and device name
 const deleteSensorData = async (id, deviceName) => {
   try {

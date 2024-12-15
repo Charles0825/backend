@@ -140,9 +140,8 @@ async function calculateAndSaveAllAverages() {
   const mqttClient = mqtt.connect("mqtt://raspi:1883");
 
   try {
-    await client.connect(); // Connect once
+    await client.connect();
 
-    // Step 1: Check if the current date has changed and save it
     const shouldProceed = await checkAndSaveCurrentDate(client);
 
     if (shouldProceed) {

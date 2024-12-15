@@ -153,53 +153,49 @@ app.get("/api/sensors", limiter, async (req, res) => {
 });
 
 function aggregateData(data, period) {
-  // Group the data based on the specified period (hour, day, or month)
   const groupedData = _.groupBy(data, (item) => {
     const date = dayjs(item.timestamp, "MM/DD/YYYY, hh:mm:ss A");
     switch (period) {
       case "day":
-        return date.format("MM/DD/YYYY");
+        return `${date.format("MM/DD/YYYY")}-${item.deviceName}`; // Group by day and device name
       case "month":
-        return date.format("MM/YYYY");
+        return `${date.format("MM/YYYY")}-${item.deviceName}`; // Group by month and device name
       default:
-        throw new Error("Invalid period specified. Use 'day', or 'month'.");
+        throw new Error("Invalid period specified. Use 'day' or 'month'.");
     }
   });
 
   return Object.keys(groupedData).map((key) => {
     const group = groupedData[key];
-
-    // Initialize accumulator variables for all fields
     let totalVoltage = 0;
     let totalCurrent = 0;
     let totalActivePower = 0;
     let totalFrequency = 0;
     let totalPowerFactor = 0;
-    let maxEnergy = -Infinity; // Start with a low value for max energy
+    let maxEnergy = -Infinity;
 
-    // Collect data for the group in one pass
     const ids = [];
-    let deviceName = group[0].deviceName; // Assuming deviceName is consistent
+    let deviceName = group[0].deviceName;
+
     group.forEach((item) => {
       totalVoltage += item.voltage || 0;
       totalCurrent += item.current || 0;
       totalActivePower += item.activePower || 0;
       totalFrequency += item.frequency || 0;
       totalPowerFactor += item.powerFactor || 0;
-      maxEnergy = Math.max(maxEnergy, item.energy || 0); // Find max energy in the group
-      ids.push(item.id); // Collect all IDs
+      maxEnergy = Math.max(maxEnergy, item.energy || 0);
+      ids.push(item.id);
     });
 
-    // Calculate averages and return the aggregated result
     const groupSize = group.length;
     return {
-      timestamp: key,
-      id: ids, // Collect all IDs in an array
-      deviceName: deviceName, // Assuming consistent device name
+      timestamp: period === "day" ? key.split("-")[0] : key.split("-")[0], // Extract date or month based on period
+      deviceName: deviceName,
+      id: ids,
       voltage: _.round(totalVoltage / groupSize, 2),
       current: _.round(totalCurrent / groupSize, 2),
       activePower: _.round(totalActivePower / groupSize, 2),
-      energy: maxEnergy, // Use the highest energy value
+      energy: maxEnergy,
       frequency: _.round(totalFrequency / groupSize, 2),
       powerFactor: _.round(totalPowerFactor / groupSize, 2),
     };

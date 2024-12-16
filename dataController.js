@@ -111,13 +111,8 @@ async function calculateAndSaveAllAverages() {
     database: "sensor_data",
   });
 
-  const mqttClient = mqtt.connect("mqtt://raspi:1883");
-
   try {
     await client.connect();
-
-    mqttClient.publish("pzem/energy/reset", "RESET", { retain: false });
-    console.log("Published RESET to topic pzem/energy/reset.");
 
     await calculateAndSaveAverages("hour", client);
 
@@ -125,7 +120,6 @@ async function calculateAndSaveAllAverages() {
   } catch (err) {
     console.error("Error during the average calculation process:", err.stack);
   } finally {
-    mqttClient.end();
     await client.end();
   }
 }

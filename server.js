@@ -516,8 +516,7 @@ app.delete("/api/sensors", async (req, res) => {
   }
 });
 
-// Schedule the task to run at midnight every day
-cron.schedule("0 0 * * *", () => {
+cron.schedule("0 * * * *", () => {
   calculateAndSaveAllAverages();
 });
 

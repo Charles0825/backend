@@ -1,11 +1,11 @@
 const mqtt = require("mqtt");
 const { Client } = require("pg");
 const _ = require("lodash");
+const cron = require("node-cron");
 require("dotenv").config();
 
 async function calculateAndSaveAverages(timeInterval, client) {
   try {
-    // Define the SQL query based on the time interval (hourly)
     const avgQuery = `
         SELECT 
           date_trunc($1, timestamp) AS period,
@@ -23,7 +23,6 @@ async function calculateAndSaveAverages(timeInterval, client) {
 
     const result = await client.query(avgQuery, [timeInterval]);
 
-    // Define the insert query based on the table corresponding to the time interval
     let insertQuery;
     let tableName;
     if (timeInterval === "hour") {
@@ -37,7 +36,6 @@ async function calculateAndSaveAverages(timeInterval, client) {
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
       `;
 
-    // Step 2: Insert each period's average into the corresponding table
     for (const row of result.rows) {
       await client.query(insertQuery, [
         row.period,
@@ -66,65 +64,41 @@ async function calculateAndSaveAverages(timeInterval, client) {
 
 async function deleteOldData(client) {
   try {
-    // Get the current date (excluding today's data)
-    const currentDateQuery = `SELECT CURRENT_DATE`;
-    const result = await client.query(currentDateQuery);
-    const currentDate = result.rows[0].current_date;
-
-    // Delete data older than the current date (excluding today's data)
-    const deleteQuery = `
-        DELETE FROM sensor_data
-        WHERE timestamp < $1;
+    // Get the most recent processed hour from the hourly_averages table
+    const lastProcessedQuery = `
+        SELECT MAX(timestamp) AS last_processed_hour
+        FROM hourly_averages;
       `;
+    const lastProcessedResult = await client.query(lastProcessedQuery);
+    const lastProcessedHour = lastProcessedResult.rows[0].last_processed_hour;
 
-    // Execute the delete query
-    await client.query(deleteQuery, [currentDate]);
+    if (lastProcessedHour) {
+      // Delete sensor data up to the most recent processed hour
+      const deleteQuery = `
+          DELETE FROM sensor_data
+          WHERE timestamp < $1;
+        `;
+      await client.query(deleteQuery, [lastProcessedHour]);
 
-    console.log("Old data deleted successfully, excluding today's data.");
+      console.log(`Old data deleted up to ${lastProcessedHour}.`);
+    } else {
+      console.log("No processed data found to determine deletion range.");
+    }
   } catch (err) {
     console.error("Error deleting old data", err.stack);
   }
 }
 
-async function checkAndSaveCurrentDate(client) {
+async function resetPzem() {
+  const mqttClient = mqtt.connect("mqtt://raspi:1883");
+
   try {
-    // Get the current date (this is the date without time)
-    const currentDateQuery = `SELECT CURRENT_DATE`;
-    const result = await client.query(currentDateQuery);
-    const currentDate = result.rows[0].current_date;
-
-    // Check if today's date is already saved in the database
-    const lastDateQuery = `
-        SELECT "current_date"
-        FROM date_tracker
-        ORDER BY last_updated DESC
-        LIMIT 1;
-      `;
-    const lastDateResult = await client.query(lastDateQuery);
-
-    if (
-      lastDateResult.rowCount > 0 &&
-      _.isEqual(lastDateResult.rows[0].current_date, currentDate)
-    ) {
-      // The current date is already saved, so no need to continue processing
-      console.log(
-        "Today's date is already saved in the database. No need to process."
-      );
-      return false; // Indicating no need to proceed
-    }
-
-    // If the current date is not saved, insert it into the database
-    const insertDateQuery = `
-        INSERT INTO date_tracker ("current_date")
-        VALUES ($1);
-      `;
-    await client.query(insertDateQuery, [currentDate]);
-
-    console.log("Current date saved to database.");
-    return true;
+    mqttClient.publish("pzem/energy/reset", "RESET", { retain: false });
+    console.log("Published RESET to topic pzem/energy/reset.");
   } catch (err) {
-    console.error("Error checking or saving current date", err.stack);
-    return false;
+    console.error("Error resetting PZEM", err.stack);
+  } finally {
+    mqttClient.end();
   }
 }
 
@@ -142,18 +116,12 @@ async function calculateAndSaveAllAverages() {
   try {
     await client.connect();
 
-    const shouldProceed = await checkAndSaveCurrentDate(client);
+    mqttClient.publish("pzem/energy/reset", "RESET", { retain: false });
+    console.log("Published RESET to topic pzem/energy/reset.");
 
-    if (shouldProceed) {
-      mqttClient.publish("pzem/energy/reset", "RESET", { retain: false });
-      console.log("Published RESET to topic pzem/energy/reset.");
+    await calculateAndSaveAverages("hour", client);
 
-      await calculateAndSaveAverages("hour", client);
-
-      await deleteOldData(client);
-    } else {
-      console.log("No new data to process today.");
-    }
+    await deleteOldData(client);
   } catch (err) {
     console.error("Error during the average calculation process:", err.stack);
   } finally {
@@ -161,6 +129,12 @@ async function calculateAndSaveAllAverages() {
     await client.end();
   }
 }
+
+// Schedule the PZEM reset at midnight (00:00) every day
+cron.schedule("0 0 * * *", () => {
+  resetPzem();
+  console.log("PZEM reset triggered at midnight.");
+});
 
 module.exports = {
   calculateAndSaveAllAverages,
